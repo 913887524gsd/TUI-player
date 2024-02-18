@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(TUI_player)
 
-option(CMAKE_BUILD_TYPE "" Debug)
+option(CMAKE_BUILD_TYPE "" release)
 
 # C++
 enable_language(CXX)

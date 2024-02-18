@@ -13,7 +13,10 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     int fd[2];
-    pipe(fd);
+    if (pipe(fd) == -1) {
+        fprintf(stderr, "pipe error");
+        exit(EXIT_FAILURE);
+    }
     
     frame_receivier = fdopen(fd[0], "r");
     frame_sender = fdopen(fd[1], "w");

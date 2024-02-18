@@ -24,7 +24,10 @@ void *play_stream(void * __attribute__((unused))arg)
         fprintf(stderr, "snd_pcm_hw_params_set_format failed");
         exit(EXIT_FAILURE);
     }
-    assert(fread(&header, sizeof(header), 1, frame_receivier) == 1);
+    if (fread(&header, sizeof(header), 1, frame_receivier) == 0) {
+        fprintf(stderr, "fread failed");
+        exit(EXIT_FAILURE);
+    }
     unsigned nch = header.mode == single_channel ? 1 : 2;
     if (snd_pcm_hw_params_set_channels(handle, hw, nch) < 0) {
         fprintf(stderr, "snd_pcm_hw_params_set_channels failed");
@@ -35,7 +38,7 @@ void *play_stream(void * __attribute__((unused))arg)
         fprintf(stderr, "snd_pcm_hw_params_set_rate_near failed");
         exit(EXIT_FAILURE);
     }
-    snd_pcm_uframes_t frames = 128;
+    snd_pcm_uframes_t frames = 4;
     if (snd_pcm_hw_params_set_period_size_near(handle, hw, &frames, NULL) < 0) {
         fprintf(stderr, "snd_pcm_hw_params_set_period_size_near failed");
         exit(EXIT_FAILURE);

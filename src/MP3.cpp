@@ -96,10 +96,12 @@ bool read_Xing_header(XingInfo *info)
 bool read_tag_frame(XingInfo *info)
 {
     // first frame
-    assert(fstream->meet_sync_word());
+    fstream->meet_sync_word();
     FrameHeader header;
     read_frame_header(&header, false);
-    assert(fwrite(&header, sizeof(header), 1, frame_sender) == 1);
+    if (fwrite(&header, sizeof(header), 1, frame_sender) == 0) {
+        abort();
+    }
     // skip side info
     fstream->skip_bytes(get_side_info_length(&header));
     skip_crc(&header);
@@ -370,7 +372,7 @@ void requantization(FrameHeader *header, Layer3SideInfo *sideinfo, Layer3MainDat
                                     pow(2, -(scalefac_multiplier * cdata->scalefac_s[sfb][window]));
                             }
                     while (fl < 576)
-                        assert(cdata->samples[fl++] == 0.0);
+                        cdata->samples[fl++] = 0;
                 } else {
                     for (int sfb = 0 ; sfb < 12 ; sfb++)
                         for (int window = 0 ; window < 3 ; window++)
@@ -385,7 +387,7 @@ void requantization(FrameHeader *header, Layer3SideInfo *sideinfo, Layer3MainDat
                                     pow(2, -(scalefac_multiplier * cdata->scalefac_s[sfb][window]));
                             }
                     while (fl < 576)
-                        assert(cdata->samples[fl++] == 0.0);
+                        cdata->samples[fl++] = 0;
                 }
             } else {
                 for (int sfb = 0 ; sfb < 21 ; sfb++)
@@ -399,6 +401,8 @@ void requantization(FrameHeader *header, Layer3SideInfo *sideinfo, Layer3MainDat
                             pow(2, (cinfo->global_gain - 210) / 4.0) *
                             pow(2, -(scalefac_multiplier * (cdata->scalefac_l[sfb] + cinfo->preflag * pretab[sfb])));
                     }
+                while (fl < 576)
+                    cdata->samples[fl++] = 0;
             }
         }
 }
@@ -425,7 +429,7 @@ void stereo_processing(FrameHeader *header, Layer3SideInfo *sideinfo, Layer3Main
             }
         };
 
-        auto Intensity_Stereo = [&](int fl, int count, int is_pos) {
+        auto Intensity_Stereo = [&](int fl, int count, uint8_t is_pos) {
             if (is_pos == 7)
                 return;
             float is_ratio = tan(is_pos * PI / 12.0);
@@ -457,7 +461,7 @@ void stereo_processing(FrameHeader *header, Layer3SideInfo *sideinfo, Layer3Main
                     for (int sfb = 3 ; sfb < 12 ; sfb++)
                         for (int window = 0 ; window < 3 ; window++) {
                             if (fl >= all_zero) {
-                                Intensity_Stereo(fl, short_table[sfb], cdatas[1].scalefac_s[window][sfb]);
+                                Intensity_Stereo(fl, short_table[sfb], cdatas[1].scalefac_s[sfb][window]);
                                 if (!align_up)
                                     align_up = 1, all_zero = fl;
                             }
@@ -467,7 +471,7 @@ void stereo_processing(FrameHeader *header, Layer3SideInfo *sideinfo, Layer3Main
                     for (int sfb = 0 ; sfb < 12 ; sfb++)
                         for (int window = 0 ; window < 3 ; window++) {
                             if (fl >= all_zero) {
-                                Intensity_Stereo(fl, short_table[sfb], cdatas[1].scalefac_s[window][sfb]);
+                                Intensity_Stereo(fl, short_table[sfb], cdatas[1].scalefac_s[sfb][window]);
                                 if (!align_up)
                                     align_up = 1, all_zero = fl;
                             }
@@ -566,10 +570,12 @@ void alias_reduction(FrameHeader *header, Layer3SideInfo *sideinfo, Layer3XR xr[
                 sb_max = 0;
             for (int sb = 1 ; sb < sb_max ; sb++)
                 for (int i = 0 ; i < 8 ; i++) {
-                    float x = cxr->l[sb][- 1 - i];
-                    float y = cxr->l[sb][i];
-                    cxr->l[sb][- 1 - i] = x * cs[i] - y * ca[i];
-                    cxr->l[sb][i] = y * cs[i] + x * ca[i];
+                    int offset_x = sb * 18 - 1 - i;
+                    int offset_y = sb * 18 + i;
+                    float x = cxr->pcm[offset_x];
+                    float y = cxr->pcm[offset_y];
+                    cxr->pcm[offset_x] = x * cs[i] - y * ca[i];
+                    cxr->pcm[offset_y] = y * cs[i] + x * ca[i];
                 }
         }
 }
@@ -768,8 +774,8 @@ void *MP3_fetcher(void *filepath)
     auto xr = new Layer3XR[2][2];
     float *pcm = new float[576 * 4];
     skip_ID3V2();
-    XingInfo XING_info;
-    assert(read_tag_frame(&XING_info));
+    XingInfo XING_info = {};
+    read_tag_frame(&XING_info);
     for (size_t frame = 1 ; frame <= XING_info.frames && fstream->meet_sync_word() ; frame++) {
         read_frame_header(header, false);
         print_frame_header(header);
@@ -787,7 +793,7 @@ void *MP3_fetcher(void *filepath)
         synth_filterbank(header, xr);
         orchestrate(header, xr, pcm);
         int nch = header->mode == single_channel ? 1 : 2;
-        assert(fwrite(pcm, 2 * nch * 576 * sizeof(float) , 1, frame_sender) == 1);
+        fwrite(pcm, 2 * nch * 576 * sizeof(float) , 1, frame_sender);
     }
     fclose(frame_sender);
     delete fstream; delete mstream;
