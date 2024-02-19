@@ -26,4 +26,6 @@ int main(int argc, char *argv[])
     pthread_create(tid + 1, NULL, play_stream, NULL);
     pthread_join(tid[0], NULL);
     pthread_join(tid[1], NULL);
+
+    return 0;
 }

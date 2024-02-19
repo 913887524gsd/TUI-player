@@ -52,11 +52,14 @@ bool read_frame_header(FrameHeader *header, bool read_syncword)
     else
         header->syncword = 0xfff;
     header->ID = fstream->read_bits(1);
+    assert(header->ID == 1); // MPEG-1
     header->layer = fstream->read_bits(2);
     assert(header->layer == layer3);
     header->protection_bit = fstream->read_bits(1);
     header->bitrate_index = fstream->read_bits(4);
+    assert(0 < header->bitrate_index && header->bitrate_index < 15);
     header->sampling_frequency = fstream->read_bits(2);
+    assert(header->sampling_frequency != 3);
     header->padding_bit = fstream->read_bits(1);
     header->private_bit = fstream->read_bits(1);
     header->mode = fstream->read_bits(2);
@@ -99,9 +102,7 @@ bool read_tag_frame(XingInfo *info)
     fstream->meet_sync_word();
     FrameHeader header;
     read_frame_header(&header, false);
-    if (fwrite(&header, sizeof(header), 1, frame_sender) == 0) {
-        abort();
-    }
+    fwrite(&header, sizeof(header), 1, frame_sender);
     // skip side info
     fstream->skip_bytes(get_side_info_length(&header));
     skip_crc(&header);
@@ -774,8 +775,11 @@ void *MP3_fetcher(void *filepath)
     auto xr = new Layer3XR[2][2];
     float *pcm = new float[576 * 4];
     skip_ID3V2();
-    XingInfo XING_info = {};
-    read_tag_frame(&XING_info);
+    XingInfo XING_info;
+    if (read_tag_frame(&XING_info) == false) {
+        fprintf(stderr, "read_tag_frame error");
+        exit(EXIT_FAILURE);
+    }
     for (size_t frame = 1 ; frame <= XING_info.frames && fstream->meet_sync_word() ; frame++) {
         read_frame_header(header, false);
         print_frame_header(header);
