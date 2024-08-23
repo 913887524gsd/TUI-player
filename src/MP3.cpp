@@ -354,7 +354,7 @@ void requantization(FrameHeader *header, Layer3SideInfo *sideinfo, Layer3MainDat
                             if(cdata->samples[fl] == 0.0)
                                 continue;
                             float v = cdata->samples[fl];
-                            float absv = abs(v);
+                            float absv = fabs(v);
                             cdata->samples[fl] = (v > 0 ? 1.0 : -1.0) * // sign
                                 ((int)absv > 16 ? pow(absv, 4.0 / 3.0) : pow_4_3[(int)absv]) * // is
                                 pow(2, (cinfo->global_gain - 210) / 4.0) *
@@ -366,7 +366,7 @@ void requantization(FrameHeader *header, Layer3SideInfo *sideinfo, Layer3MainDat
                                 if (cdata->samples[fl] == 0.0)
                                     continue;
                                 float v = cdata->samples[fl];
-                                float absv = abs(v);
+                                float absv = fabs(v);
                                 cdata->samples[fl] = (v > 0 ? 1.0 : -1.0) * // sign
                                     ((int)absv > 16 ? pow(absv, 4.0 / 3.0) : pow_4_3[(int)absv]) * // is
                                     pow(2, (cinfo->global_gain - 210 - 8 * cinfo->subblock_gain[window]) / 4.0) *
@@ -381,7 +381,7 @@ void requantization(FrameHeader *header, Layer3SideInfo *sideinfo, Layer3MainDat
                                 if (cdata->samples[fl] == 0.0)
                                     continue;
                                 float v = cdata->samples[fl];
-                                float absv = abs(v);
+                                float absv = fabs(v);
                                 cdata->samples[fl] = (v > 0 ? 1.0 : -1.0) * // sign
                                     ((int)absv > 16 ? pow(absv, 4.0 / 3.0) : pow_4_3[(int)absv]) * // is
                                     pow(2, (cinfo->global_gain - 210 - 8 * cinfo->subblock_gain[window]) / 4.0) *
@@ -396,7 +396,7 @@ void requantization(FrameHeader *header, Layer3SideInfo *sideinfo, Layer3MainDat
                         if(cdata->samples[fl] == 0.0)
                             continue;
                         float v = cdata->samples[fl];
-                        float absv = abs(v);
+                        float absv = fabs(v);
                         cdata->samples[fl] = (v > 0 ? 1.0 : -1.0) * // sign
                             ((int)absv > 16 ? pow(absv, 4.0 / 3.0) : pow_4_3[(int)absv]) * // is
                             pow(2, (cinfo->global_gain - 210) / 4.0) *
@@ -801,6 +801,6 @@ void *MP3_fetcher(void *filepath)
     }
     fclose(frame_sender);
     delete fstream; delete mstream;
-    delete header; delete sideinfo; delete maindata; delete xr; delete pcm;
+    delete header; delete sideinfo; delete maindata; delete[] xr; delete[] pcm;
     return NULL;
 }

@@ -1,5 +1,6 @@
 #include <PlayStream.h>
 #include <MP3Header.h>
+#include <cstdio>
 #include <cstdlib>
 #include <alsa/asoundlib.h>
 
@@ -47,17 +48,20 @@ void *play_stream(void * __attribute__((unused))arg)
         fprintf(stderr, "snd_pcm_hw_params failed");
         exit(EXIT_FAILURE);
     }
-
+    if (snd_pcm_prepare(handle) < 0) {
+        fprintf(stderr, "snd_pcm_prepare failed");
+        exit(EXIT_FAILURE);
+    }
     float pcm[576 * 4];
 
     while (fread(pcm, 2 * nch * 576 * sizeof(float), 1, frame_receivier) == 1) {
         int e = snd_pcm_writei(handle, pcm, 1152);
-		if (e == -EPIPE)
-			snd_pcm_recover(handle, e, 0);
+        if (e == -EPIPE)
+            snd_pcm_recover(handle, e, 0);
     }
     fclose(frame_receivier);
 
     snd_pcm_drain(handle);
     snd_pcm_close(handle);
-    return NULL;
+    return NULL;    
 }
